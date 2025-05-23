@@ -19,8 +19,16 @@ MongoClient.connect(mongoUri, { useUnifiedTopology: true })
     db = client.db(dbName);
     collection = db.collection(collectionName);
     console.log('✅ Connected to MongoDB');
+
+    // ✅ Server จะเริ่มรับ request ก็ต่อเมื่อเชื่อม Mongo ได้แล้ว
+    app.listen(port, () => {
+      console.log(`🚀 Server running on port ${port}`);
+    });
   })
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err);
+    process.exit(1); // ❌ ถ้าเชื่อมไม่ได้ ก็ไม่ควรรัน server
+  });
 
 app.post('/api/track', async (req, res) => {
   try {
@@ -31,7 +39,10 @@ app.post('/api/track', async (req, res) => {
       time: req.body.time || new Date().toISOString()
     };
 
+    console.log('📩 Incoming log:', log);
+
     await collection.insertOne(log);
+    console.log('✅ Log inserted');
     res.status(200).json({ message: 'Logged successfully' });
   } catch (error) {
     console.error('❌ Error inserting log:', error);
@@ -41,8 +52,4 @@ app.post('/api/track', async (req, res) => {
 
 app.get('/', (req, res) => {
   res.send('MongoDB Logger API is running ✅');
-});
-
-app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
 });
