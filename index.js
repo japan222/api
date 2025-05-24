@@ -16,14 +16,9 @@ app.use(express.json());
 let db, collection;
 
 async function getCountry(ip) {
-  try {
-    const response = await fetch(`http://ip-api.com/json/${ip}`);
-    const data = await response.json();
-    return data.country || "Unknown";
-  } catch (error) {
-    console.error('🌐 IP lookup failed:', error);
-    return "Unknown";
-  }
+  const res = await fetch(`https://ipapi.co/${ip}/country_name/`);
+  const country = await res.text();
+  return country || 'Unknown';
 }
 
 MongoClient.connect(mongoUri, { useUnifiedTopology: true })
