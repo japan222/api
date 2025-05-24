@@ -1,7 +1,6 @@
 const express = require('express');
 const { MongoClient } = require('mongodb');
 const cors = require('cors');
-const fetch = require('node-fetch');
 require('dotenv').config();
 
 const app = express();
@@ -17,15 +16,15 @@ let db, collection;
 
 async function getCountry(ip) {
   try {
-    const response = await fetch(`https://ipapi.co/${ip}/json/`);
-    const data = await response.json();
+    const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+    const res = await fetch(`https://ipapi.co/${ip}/json/`);
+    const data = await res.json();
     return data.country_name || "Unknown";
   } catch (error) {
     console.error("🌍 Error fetching country:", error);
     return "Unknown";
   }
 }
-
 MongoClient.connect(mongoUri, { useUnifiedTopology: true })
   .then(client => {
     db = client.db(dbName);
