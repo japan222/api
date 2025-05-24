@@ -1,6 +1,7 @@
 const express = require('express');
 const { MongoClient } = require('mongodb');
 const cors = require('cors');
+const fetch = require('node-fetch');
 require('dotenv').config();
 
 const app = express();
@@ -13,6 +14,17 @@ app.use(cors());
 app.use(express.json());
 
 let db, collection;
+
+async function getCountry(ip) {
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}`);
+    const data = await response.json();
+    return data.country || "Unknown";
+  } catch (error) {
+    console.error('🌐 IP lookup failed:', error);
+    return "Unknown";
+  }
+}
 
 MongoClient.connect(mongoUri, { useUnifiedTopology: true })
   .then(client => {
@@ -32,18 +44,21 @@ MongoClient.connect(mongoUri, { useUnifiedTopology: true })
 
 app.post('/api/track', async (req, res) => {
   try {
-    const log = {
-      ip: req.body.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress,
-      ua: req.body.ua || req.headers['user-agent'],
-      ref: req.body.ref || '-',
-      time: req.body.time || new Date().toISOString()
-    };
+    const ipRaw = req.body.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const ip = ipRaw.split(',')[0].trim(); // เอาเฉพาะ IP แรก
+    const ua = req.body.ua || req.headers['user-agent'];
+    const ref = req.body.ref || '-';
+    const time = req.body.time || new Date().toISOString();
+
+    const country = await getCountry(ip); // 👈 ตรวจประเทศจาก IP
+
+    const log = { ip, ua, ref, time, country };
 
     console.log('📩 Incoming log:', log);
 
     await collection.insertOne(log);
-    console.log('✅ Log inserted');
-    res.status(200).json({ message: 'Logged successfully' });
+    console.log('✅ Logged:', log);
+    res.status(200).json({ message: 'Logged successfully', country });
   } catch (error) {
     console.error('❌ Error inserting log:', error);
     res.status(500).json({ error: 'Internal server error' });
